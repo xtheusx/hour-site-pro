@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,18 +11,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase-browser";
+import type { User } from "@supabase/supabase-js";
 
 const DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
 const HOURS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
 const bookingSchema = z.object({
-  name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }),
-  email: z.string().email({ message: "Email inválido." }),
+  name: z.string().trim().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }).max(100, { message: "Nome muito longo." }),
+  email: z.string().trim().email({ message: "Email inválido." }).max(255, { message: "Email muito longo." }),
 });
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const Calendar = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; hour: string } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,6 +38,19 @@ const Calendar = () => {
   } = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
   });
+
+  useEffect(() => {
+    // Check authentication
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -55,6 +72,13 @@ const Calendar = () => {
   }, []);
 
   const handleSlotClick = (day: string, hour: string) => {
+    // Check if user is authenticated
+    if (!user) {
+      toast.error("Você precisa estar logado para agendar!");
+      navigate("/auth");
+      return;
+    }
+
     const slotId = `${day}-${hour}`;
     if (bookedSlots.includes(slotId)) {
       toast.info("Este horário já está reservado!");
@@ -65,7 +89,7 @@ const Calendar = () => {
   };
 
   const onSubmit = async (data: BookingFormValues) => {
-    if (!selectedSlot) return;
+    if (!selectedSlot || !user) return;
 
     try {
       const { data: newAppointment, error } = await supabase
@@ -76,6 +100,7 @@ const Calendar = () => {
             hour: selectedSlot.hour,
             name: data.name,
             email: data.email,
+            user_id: user.id,
           },
         ])
         .select()
@@ -106,17 +131,36 @@ const Calendar = () => {
     return bookedSlots.includes(`${day}-${hour}`);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Você saiu da conta.");
+    navigate("/auth");
+  };
+
   return (
     <section id="agendamento" className="py-24 px-4">
       <div className="container mx-auto">
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <CalendarIcon className="inline-block w-10 h-10 mr-2 text-primary" />
-            Agende Seu <span className="text-gradient">Horário</span>
-          </h2>
+          <div className="flex justify-center items-center gap-4 mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold">
+              <CalendarIcon className="inline-block w-10 h-10 mr-2 text-primary" />
+              Agende Seu <span className="text-gradient">Horário</span>
+            </h2>
+            {user && (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            )}
+          </div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Escolha o melhor horário para começar seu projeto
+            {user ? "Escolha o melhor horário para começar seu projeto" : "Faça login para agendar"}
           </p>
+          {!user && (
+            <Button onClick={() => navigate("/auth")} className="mt-4">
+              Fazer Login
+            </Button>
+          )}
         </div>
 
         <Card className="max-w-6xl mx-auto glass-card">
