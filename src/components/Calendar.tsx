@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
 const HOURS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
@@ -43,9 +44,13 @@ const Calendar = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/appointments");
-        const appointments = await response.json();
-        const slots = appointments.map((appt: any) => `${appt.day}-${appt.hour}`);
+        const { data: appointments, error } = await supabase
+          .from("appointments")
+          .select("day, hour");
+
+        if (error) throw error;
+
+        const slots = appointments?.map((appt) => `${appt.day}-${appt.hour}`) || [];
         setBookedSlots(slots);
       } catch (error) {
         console.error("Failed to fetch appointments:", error);
@@ -69,19 +74,28 @@ const Calendar = () => {
     if (!selectedSlot) return;
 
     try {
-      const response = await fetch("http://localhost:3001/api/appointments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...selectedSlot, ...data }),
-      });
+      const { data: newAppointment, error } = await supabase
+        .from("appointments")
+        .insert([
+          {
+            day: selectedSlot.day,
+            hour: selectedSlot.hour,
+            name: data.name,
+            email: data.email,
+          },
+        ])
+        .select()
+        .single();
 
-      if (!response.ok) {
-        throw new Error("Failed to book appointment");
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("Este horário já foi reservado por outra pessoa!");
+        } else {
+          throw error;
+        }
+        return;
       }
 
-      const newAppointment = await response.json();
       setBookedSlots([...bookedSlots, `${newAppointment.day}-${newAppointment.hour}`]);
       setIsDialogOpen(false);
       reset();
