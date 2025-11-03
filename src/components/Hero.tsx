@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Rocket } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
+import logo from "@/assets/logo.png";
 
 const Hero = () => {
   const handleWhatsApp = () => {
@@ -9,6 +10,9 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Logo no canto superior esquerdo */}
+      <img src={logo} alt="Site 1h" className="absolute top-6 left-6 w-32 h-32 object-contain z-20" />
+      
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 z-0"
