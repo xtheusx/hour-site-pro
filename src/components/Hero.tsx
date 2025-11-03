@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Rocket } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
+import logo from "@/assets/logo.jpg";
 
 const Hero = () => {
   const handleWhatsApp = () => {
@@ -24,6 +25,9 @@ const Hero = () => {
       {/* Content */}
       <div className="container relative z-10 mx-auto px-4 py-20 text-center">
         <div className="animate-fade-in space-y-8 max-w-4xl mx-auto">
+          <div className="flex justify-center mb-8">
+            <img src={logo} alt="Site 1h Logo" className="w-48 h-48 md:w-64 md:h-64 object-contain" />
+          </div>
           <h1 className="text-5xl md:text-7xl font-black leading-tight">
             Sites Profissionais Feitos em Até{" "}
             <span className="text-gradient">1 Hora</span>{" "}
