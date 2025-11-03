@@ -1,13 +1,12 @@
 import { Heart } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
     <footer className="py-12 px-4 border-t border-border/50">
       <div className="container mx-auto">
         <div className="text-center space-y-4">
-          <p className="text-2xl font-bold">
-            Sites <span className="text-gradient">Express</span>
-          </p>
+          <img src={logo} alt="Site 1h" className="w-20 h-20 mx-auto object-contain" />
           <p className="text-muted-foreground">
             Transformando ideias em sites profissionais desde 2024
           </p>
